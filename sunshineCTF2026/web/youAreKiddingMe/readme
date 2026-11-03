@@ -1,0 +1,33 @@
+ada website, login bisa menjadi seorang dengan role "reader"
+saat login, kita diberi JWT, so probably akan ada JWT forge. Bentuk JWT seperti ini :
+eyJhbGciOiJIUzI1NiIsImtpZCI6InJlYWRlci5rZXkiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJnb2tpbCIsInJvbGUiOiJyZWFkZXIifQ.kJ88oQj2N9uW4W5sWSZW18e_SzdTHktW8UTHZ35XuWo
+
+terdapat juga endpoint /admin yang hanya bisa diakses dengan role "editor"
+jadi probably kita harus forge JWT agar bisa role "editor" instead of "reader"
+
+nah ada field menarik di header yaitu "kid" : "reader.key"
+
+kalo diubah jadi asal misal "kid": "reader.keyy"
+di halaman admin, akan ngasi error bahwa "/app/keys/reader.keyy no such file or directory"
+Ini membuktikan bahwa jwt mengambil key secret itu via kid ini dengan transversal file. 
+Jadi, secret yang dipakai buat sign reader itu ada di /app/keys/reader.key
+
+Nah, jadi sekarang yang mau kita lakukan adalah ubah path reader.key ini via lfi dengan ../../fileYangValuenyaKitaTahu
+hal ini bertujuan untuk meng-sign JWT kita dengan secret value yang kita tahu, sehingga nanti kita bisa forge JWT nya.
+
+Pertama ku coba ../../../../dev/null karena valuenya otomatis 0
+"kid": "../../../../dev/null" dan sign dengan secret "" akan menghasilkan error bahwa secret harus ada.
+
+Well, berarti kita gabisa sign jwt dengan value yang kosong.
+Jadi aku coba buat sign secret menggunakan file di /static/style.css karena di web kita bisa liat dengan jelas isinya di endpoint /static/style.css
+sehingga, "kid": "../static/style.css". 
+
+Lalu, kita curl dulu endpoint tersebut lalu hasilnya dimasukkan ke style.css lokal kita.
+Hal ini karena kalau kita langsung copas secret untuk signing, dia bisa berbeda karena ada perbedaan byte. Jadi harus benar2 raw dan bisa didapat via curl
+
+Setelah curl menuliskan static/style.css di server ke file style.css lokal kita, 
+baru kita mulai forge jwt dengan file tersebut via open(style.css, "rb") sebagai secret untuk sign JWT.
+
+Setelah forge dan berhasil akses role editor, flag akan muncul di halaman /admin
+
+sun{h0tw1r3d_4dm1n_jwt}

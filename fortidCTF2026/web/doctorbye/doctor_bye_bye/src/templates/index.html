@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>St. Codd's On-Call Board</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="cross">+</span>
+    <div>
+      <p class="eyebrow">St. Codd's Hospital</p>
+      <h1>On-Call Board</h1>
+    </div>
+  </header>
+
+  <main>
+    <section class="notice">
+      <strong>Staff update</strong>
+      <span>Dr. Bye Bye has retired. Private personnel records are never displayed.</span>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Current assignment</p>
+          <h2>Who should we page?</h2>
+        </div>
+        <span class="live"><i></i> Live schedule</span>
+      </div>
+
+      <div id="status" role="status" aria-live="polite">Loading schedule…</div>
+      <article id="doctor" class="doctor" hidden>
+        <div class="avatar" aria-hidden="true">Rx</div>
+        <div>
+          <h3 id="doctor-name"></h3>
+          <p><span id="doctor-specialty"></span> · Room <span id="doctor-room"></span></p>
+        </div>
+        <span class="badge">ON CALL</span>
+      </article>
+    </section>
+
+  </main>
+
+  <script>
+    const doctor = document.querySelector('#doctor');
+    const status = document.querySelector('#status');
+
+    async function updateBoard() {
+      doctor.hidden = true;
+      status.textContent = 'Updating schedule…';
+      try {
+        const response = await fetch('/api/on-call?sort=name');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        document.querySelector('#doctor-name').textContent = data.doctor.name;
+        document.querySelector('#doctor-specialty').textContent = data.doctor.specialty;
+        document.querySelector('#doctor-room').textContent = data.doctor.room;
+        status.textContent = '';
+        doctor.hidden = false;
+      } catch (error) {
+        status.textContent = error.message || 'The schedule is unavailable.';
+      }
+    }
+
+    updateBoard();
+  </script>
+</body>
+</html>
